@@ -22,11 +22,11 @@ def main():
     global anode_width, anode_height, cathode_width, cathode_height
     
     rootpath = r'C:\Users\eneidhart\Documents\Laser Test Data\150805-UlyssesVsAcuGage'
-    filename = '22707_Raw_unpivot.csv'
+    filename = '22745_Raw_unpivot.csv'
     filepath = os.path.join(rootpath, filename)
     
     anodes = ["22707", "22713", "22725", "22733", "22741"]
-    cathodes = ["22717", "22720", "22728", "22738", "22748"]
+    cathodes = ["22717", "22720", "22728", "22738", "22745"]
     
     if filename.split("_")[0] in anodes:
         anode = True
@@ -183,7 +183,7 @@ def main():
         
         f = plt.figure(1)
         plt.clf()
-        fname = "%s_%sHorz_%s_Whole.png" % (filename.split("_")[0], mid, t)
+        fname = "%s_%sVert_%s_Whole.png" % (filename.split("_")[0], mid, t)
         fpath = os.path.join(fdir, fname)
         
         a = f.add_subplot(111)
@@ -200,7 +200,7 @@ def main():
         
         g = plt.figure(2)
         plt.clf()
-        fname = "%s_%sHorz_%s_Top.png" % (filename.split("_")[0], mid, t)
+        fname = "%s_%sVert_%s_Top.png" % (filename.split("_")[0], mid, t)
         fpath = os.path.join(fdir, fname)
         
         a1 = g.add_subplot(111)
@@ -208,7 +208,7 @@ def main():
         g.text(0.0, 0.0, u0)
         g.text(0.5, 0.0, u1)
         g.text(1.0, 0.0, ag)
-        a1.set_ylim([0.2, 0.4])
+        a1.set_ylim([0.3, 0.5])
         a1.plot(rawy, rawz, 'g.')
         a1.plot(uy, uz, 'b.')
         a1.plot(ay, az, 'r.')
