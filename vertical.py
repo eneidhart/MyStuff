@@ -10,6 +10,7 @@ import os
 import matplotlib.pyplot as plt
 import csv
 from scipy.signal import savgol_filter as savgol
+import pyodbc
 
 anode_width = np.linspace(43.830769230769230769230769230769, -34.938461538461538461538461538462, 801).tolist()
 anode_height = np.linspace(-66.31818181818181, 65.1969696969697, 1401).tolist()
@@ -21,19 +22,40 @@ cathode_height = np.linspace(-65.81686046511628, 66.85755813953489, 1401).tolist
 def main():
     global anode_width, anode_height, cathode_width, cathode_height
     
+    cnxn_str =    """
+    Driver={SQL Server Native Client 11.0};
+    Server=24m-data01;
+    Database=CellTestData;
+    UID=sa;
+    PWD=Welcome!;
+    """
+    
+    cnxn = pyodbc.connect(cnxn_str)
+    cnxn.autocommit = True
+    cursor = cnxn.cursor()
+    
     rootpath = r'C:\Users\eneidhart\Documents\Laser Test Data\150805-UlyssesVsAcuGage'
-    filename = '22745_Raw_unpivot.csv'
+    filename = '22707_Raw_unpivot.csv'
     filepath = os.path.join(rootpath, filename)
+    
+    eid = filename.split("_")[0]
     
     anodes = ["22707", "22713", "22725", "22733", "22741"]
     cathodes = ["22717", "22720", "22728", "22738", "22745"]
     
-    if filename.split("_")[0] in anodes:
+    wpltMin = -0.2
+    wpltMax = 0.6
+    
+    if eid in anodes:
         anode = True
         t = "Anode"
-    elif filename.split("_")[0] in cathodes:
+        pltMin = 0.2
+        pltMax = 0.4
+    elif eid in cathodes:
         anode = False
         t = "Cathode"
+        pltMin = 0.3
+        pltMax = 0.5
     else:
         raise
     
@@ -43,6 +65,9 @@ def main():
     x = []
     y = []
     z = []
+    
+    dy = []
+    dz = []
     
     x2 = []
     y2 = []
@@ -65,12 +90,25 @@ def main():
     print len(x), len(y), len(z)
     print "Getting raw Ulysses data"
     
-    filename3 = "%s.csv" % filename.split("_")[0]
+    filename3 = "%s.csv" % eid
     filepath3 = os.path.join(rootpath, filename3)
     
     raw = np.loadtxt(filepath3, delimiter=",", skiprows=2, unpack=True)
     
     plt.ioff()
+    
+    print "Getting filtered Ulysses data"
+    
+    q = cursor.execute("SELECT LaserProfileID FROM ElectrodeLaserProfile WHERE UlyssesElectrodeID = ?", eid).fetchone()
+    lpid = q.LaserProfileID
+    
+    q = cursor.execute("SELECT * FROM ElectrodeLaserSideProfileMD WHERE LaserProfileID = ?", lpid).fetchall()
+    for row in q:
+        if anode:
+            dy.append(anode_height[row.Pos])
+        else:
+            dy.append(cathode_height[row.Pos])
+        dz.append(row.Height)
     
     fdir = r"C:\Users\eneidhart\Documents\Laser Test Data\Vertical"
     
@@ -85,7 +123,7 @@ def main():
         
         filename21 = "150805-"
         filename22 = "Vert-"
-        filename23 = "%s%s.csv" % (t, filename.split("_")[0])
+        filename23 = "%s%s.csv" % (t, eid)
         filename2 = filename21 + mid + filename22 + filename23
         filepath2 = os.path.join(rootpath, filename2)
         myfile = open(filepath2, 'rb')
@@ -171,7 +209,7 @@ def main():
             l = 150
             r = 765
         
-        title = "%s %s %s" % (filename.split("_")[0], filename2.split("-")[1], filename2.split("-")[2][:-9])
+        title = "%s %s %s" % (eid, filename2.split("-")[1], filename2.split("-")[2][:-9])
         
         u0 = "Zeroed Ulysses:\nmin: %5.3f     max: %5.3f     dev: %5.3f" % (np.min(uz[l:r]), np.max(uz[l:r]), np.std(uz[l:r]))
         u1 = "Standard Ulysses:\nmin: %5.3f     max: %5.3f     dev: %5.3f" % (np.min(rawz[l:r]), np.max(rawz[l:r]), np.std(rawz[l:r]))
@@ -183,7 +221,7 @@ def main():
         
         f = plt.figure(1)
         plt.clf()
-        fname = "%s_%sVert_%s_Whole.png" % (filename.split("_")[0], mid, t)
+        fname = "%s_%sVert_%s_Whole.png" % (eid, mid, t)
         fpath = os.path.join(fdir, fname)
         
         a = f.add_subplot(111)
@@ -191,16 +229,17 @@ def main():
         f.text(0.0, 0.0, u0)
         f.text(0.5, 0.0, u1)
         f.text(1.0, 0.0, ag)
-        #a.set_ylim([0.2, 0.4])
+        a.set_ylim([wpltMin, wpltMax])
         a.plot(rawy, rawz, 'g.')
         a.plot(uy, uz, 'b.')
         a.plot(ay, az, 'r.')
+        a.plot(dy, dz, 'wd', mec = "k", mew = 2)
         
         plt.savefig(fpath, bbox_inches='tight')
         
         g = plt.figure(2)
         plt.clf()
-        fname = "%s_%sVert_%s_Top.png" % (filename.split("_")[0], mid, t)
+        fname = "%s_%sVert_%s_Top.png" % (eid, mid, t)
         fpath = os.path.join(fdir, fname)
         
         a1 = g.add_subplot(111)
@@ -208,10 +247,11 @@ def main():
         g.text(0.0, 0.0, u0)
         g.text(0.5, 0.0, u1)
         g.text(1.0, 0.0, ag)
-        a1.set_ylim([0.3, 0.5])
+        a1.set_ylim([pltMin, pltMax])
         a1.plot(rawy, rawz, 'g.')
         a1.plot(uy, uz, 'b.')
         a1.plot(ay, az, 'r.')
+        a1.plot(dy, dz, 'wd', mec = "k", mew = 2)
         
         plt.savefig(fpath, bbox_inches='tight')
         
