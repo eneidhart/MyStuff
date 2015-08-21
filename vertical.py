@@ -35,7 +35,7 @@ def main():
     cursor = cnxn.cursor()
     
     rootpath = r'C:\Users\eneidhart\Documents\Laser Test Data\150805-UlyssesVsAcuGage'
-    filename = '22707_Raw_unpivot.csv'
+    filename = '22745_Raw_unpivot.csv'
     filepath = os.path.join(rootpath, filename)
     
     eid = filename.split("_")[0]
@@ -51,11 +51,15 @@ def main():
         t = "Anode"
         pltMin = 0.2
         pltMax = 0.4
+        l = 40
+        r = 1340
     elif eid in cathodes:
         anode = False
         t = "Cathode"
         pltMin = 0.3
         pltMax = 0.5
+        l = 45
+        r = 1315
     else:
         raise
     
@@ -105,9 +109,9 @@ def main():
     q = cursor.execute("SELECT * FROM ElectrodeLaserSideProfileMD WHERE LaserProfileID = ?", lpid).fetchall()
     for row in q:
         if anode:
-            dy.append(anode_height[row.Pos])
+            dy.append(anode_height[int(row.Pos)])
         else:
-            dy.append(cathode_height[row.Pos])
+            dy.append(cathode_height[int(row.Pos)])
         dz.append(row.Height)
     
     fdir = r"C:\Users\eneidhart\Documents\Laser Test Data\Vertical"
@@ -201,13 +205,6 @@ def main():
         az = [z1 for [x1, y1, z1] in acugage]
         
         acutop = [z1 for z1 in az if z1 > 0.17]
-        
-        if anode:
-            l = 120
-            r = 750
-        else:
-            l = 150
-            r = 765
         
         title = "%s %s %s" % (eid, filename2.split("-")[1], filename2.split("-")[2][:-9])
         
